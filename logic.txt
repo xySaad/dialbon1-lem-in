@@ -1,0 +1,5 @@
+ - First Use bfs to find first shortest path (first found return).
+ - Reverse the path found.
+ - Use bfs to check for next shortest path.
+ - if FoundPath Compare the links to the previous revesed and remove doubled links.
+ - if reset

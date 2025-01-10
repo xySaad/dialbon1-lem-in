@@ -27,56 +27,54 @@ func main() {
 	// Normal BFS
 	ParsingData(string(dataBytes))
 	fmt.Println(Rooms, len(Rooms))
-	FindPaths()
+	bfs()
 	
 	// Reversed BFS
 
 
 }
 
-func FindPaths() {
+func bfs() {
+	
 	startRoom := Rooms[start]
 	startRoom.isChecked = true
 	Rooms[start] = startRoom
+
 	paths := [][]string{{start}}
 	validLinks := 0
 	for len(paths) != 0 {
 		for i:= 0; i < len(paths); i++ {
-			currentPath := paths[i]
-			lastInPath := paths[i][len(paths[i])-1]
 
+			lastInPath := paths[i][len(paths[i])-1]
 			linksLoop: for j, link := range Rooms[lastInPath].links {
 
-				// fmt.Println("paths", paths)
-				if link != end {
-
-					if !Rooms[link].isChecked {
-						// fmt.Println("LINKS :", Rooms[lastInPath].links, link, lastInPath)
-						
-						room := Rooms[link]
-						validLinks++
-						room.isChecked = true
-						Rooms[link] = room
-						if validLinks == 1 {
-							paths[i] = append(paths[i], link)
-						} else {
-							paths = append(paths, append(currentPath, link))
-						}
-					} else if j == len(Rooms[lastInPath].links)-1 && validLinks == 0 {
-						if i + 1 < len(paths) {
-							paths = append(paths[:i], paths[i+1:]...)
-						} else {
-							paths = paths[:i]			
-						}
-
-					}
-				} else {
+				if link == end {
 					paths[i] = append(paths[i], link)
 					validPaths = append(validPaths, paths[i])
-					// fmt.Println(validPaths)
 					paths = [][]string{{start}}
 					resetIsChecked(validPaths)
 					break linksLoop
+				}
+
+				if !Rooms[link].isChecked {
+					
+					room := Rooms[link]
+					validLinks++
+					room.isChecked = true
+					Rooms[link] = room
+					if validLinks == 1 {
+						paths[i] = append(paths[i], link)
+					} else {
+						paths = append(paths, append(paths[i], link))
+					}
+
+				} else if j == len(Rooms[lastInPath].links)-1 && validLinks == 0 {
+					if i + 1 < len(paths) {
+						paths = append(paths[:i], paths[i+1:]...)
+					} else {
+						paths = paths[:i]			
+					}
+
 				}
 			}
 			validLinks = 0
@@ -85,6 +83,7 @@ func FindPaths() {
 	fmt.Println("Valid paths :", validPaths)
 
 }
+
 func resetIsChecked(pathRooms [][]string) {
 	allPathRooms := []string{}
 	for i := range pathRooms {
