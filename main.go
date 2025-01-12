@@ -194,7 +194,7 @@ func bfs() (bool, string, string) {
 					}
 					validPaths = append(validPaths, paths[i])
 					paths = [][]string{{start}}
-					resetIsChecked(validPaths)
+					resetIsChecked()
 					fmt.Println("Valid paths :", validPaths)
 					return true, firstEncoutredAsReversed, toRemoveLink
 				}
@@ -227,7 +227,7 @@ func bfs() (bool, string, string) {
 	return false, firstEncoutredAsReversed, toRemoveLink
 }
 
-func resetIsChecked(pathRooms [][]string) {
+func resetIsChecked() {
 	// allPathRooms := []string{}
 	// for i := range pathRooms {
 	// 	for j := range pathRooms[i] {
