@@ -6,13 +6,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type Room struct {
 	links []string
 	isChecked bool
-	isSurballeAlgo bool
 	beforeInPath string
 }
 
@@ -26,135 +24,67 @@ var (
 
 func main() {
 	dataBytes, _ := os.ReadFile("data2.txt")
-	
-	// Normal BFS
 	ParsingData(string(dataBytes))
 	fmt.Println(Rooms, len(Rooms))
-	FindPaths()
+
 	
-	// Reversed BFS
+	for {
+		// time.Sleep(time.Second)
 
+		hasFoundAny, revNode, toRemove := bfs()
 
-}
-
-func FindPaths() {
-	startRoom := Rooms[start]
-	startRoom.isChecked = true
-	Rooms[start] = startRoom
-	paths := [][]string{{start}}
-	validLinks := 0
-	foundNewPath := false
-
-	for len(paths) != 0 {
-		for i:= 0; i < len(paths); i++ {
-			currentPath := paths[i]
-			lastInPath := paths[i][len(paths[i])-1]
-
-			linksLoop: for j, link := range Rooms[lastInPath].links {
-				time.Sleep(time.Millisecond * 100)
-				fmt.Println(paths, "-------")
-
-				// fmt.Println("paths", paths)
-				if link != end {
-
-					if !Rooms[link].isChecked {
-						// fmt.Println("LINKS :", Rooms[lastInPath].links, link, lastInPath)
-						
-						room := Rooms[link]
-						validLinks++
-						room.isChecked = true
-						Rooms[link] = room
-						if validLinks == 1 {
-							paths[i] = append(paths[i], link)
-						} else {
-							paths = append(paths, append(currentPath, link))
-						}
-					} else if Rooms[link].isSurballeAlgo && Rooms[link].beforeInPath != start {
-						validLinks++
-						if validLinks == 1 {
-							paths[i] = append(paths[i], link)
-						} else {
-							paths = append(paths, append(paths[i], link))
-						}
-						
-						fmt.Println(Rooms[Rooms[link].beforeInPath], Rooms[link].beforeInPath, "hereeee before in path")
-						
-					} else if j == len(Rooms[lastInPath].links)-1 && validLinks == 0 {
-						if i + 1 < len(paths) {
-							paths = append(paths[:i], paths[i+1:]...)
-						} else {
-							paths = paths[:i]			
-						}
-
-					}
-				} else if !Rooms[lastInPath].isSurballeAlgo {
-					paths[i] = append(paths[i], link)
-					validPaths = append(validPaths, paths[i])
-					fmt.Println(validPaths)
-					paths = [][]string{{start}}
-					resetIsChecked(validPaths)
-					foundNewPath = true
-					break linksLoop
-				}
-			}
-			if foundNewPath {
-				fmt.Println("backtracking used")
-				foundNewPath = false
-				if len(validPaths) > 1 {
-					fmt.Println("backtracking used")
-					BTLastValidPath()
-					// resetIsSurballe()
-				}
-				AsignSurballeValues()
-			}
+		if !hasFoundAny && revNode != "" {
 			
-			validLinks = 0
 		}
-	}
-	fmt.Println("Valid paths :", validPaths)
 
+		if !hasFoundAny {
+			fmt.Println("Bfs didn't find any paths")
+			break
+		}
+		saveBeforeInPath()
+	
+		if revNode != "" && toRemove != "" {
+			fmt.Println(revNode, toRemove, "revnode---------------------------")
+			validPaths = [][]string{}
+			Rooms = make(map[string]Room)
+	
+			ParsingData(string(dataBytes))
+			room := Rooms[revNode]
+			room.links = removeLink(room.links, toRemove)
+			Rooms[revNode] = room
+	
+			
+			room2 := Rooms[toRemove]
+			room2.links = removeLink(room2.links, revNode)
+			Rooms[toRemove] = room2
+		}
+		removePathsLinks()
+		
+	}
 }
 
-func AsignSurballeValues() {
-	// Disable last valid path isSurballe
-	path := validPaths[len(validPaths)-1]
-	for roomIndex := 1; roomIndex < len(path)-1; roomIndex++ {
-		room := Rooms[path[roomIndex]]
-		room.isSurballeAlgo = true
-		room.beforeInPath = path[roomIndex-1]
-		Rooms[path[roomIndex]] = room
-	}
-}
-
-
-// func resetIsSurballe() {
-// 	// Disable last valid path isSurballe
-// 	path := validPaths[len(validPaths)-2]
-// 	for roomIndex := range path {
-// 		room := Rooms[path[roomIndex]]
-// 		room.isSurballeAlgo = false
-// 		room.beforeInPath = ""
-// 		Rooms[path[roomIndex]] = room
-// 	}
-// }
-
-// Backtracking last valid path
-func BTLastValidPath() {
-	lastValidPath := validPaths[len(validPaths)-1]
-	for i := len(lastValidPath)-1; i > 0; i-- {
-		room := Rooms[lastValidPath[i]]
-		if room.isSurballeAlgo && i != 1 {
-			room2 := Rooms[lastValidPath[i-1]]
-			room2.links = removeLink(room2.links, lastValidPath[i-1])
-			// fmt.Println("validpathssss", validPaths)
-			fmt.Println(room2, lastValidPath[i-1], "roooooooooom")
-			validPaths = validPaths[:len(validPaths)-2]
-			return
+func removePathsLinks() {
+	for index := 0; index < len(validPaths); index++ {
+		path := validPaths[index]
+		fmt.Println(path)
+		for i := 0; i < len(path)-1; i++ {
+			node := Rooms[path[i]]
+			node.links = removeLink(node.links, path[i+1])
+			Rooms[path[i]] = node
 		}
 	}
 }
 
-// Removes a conflicted link found by backtracking
+func saveBeforeInPath() {
+	lastPath := validPaths[len(validPaths)-1]
+	for i := 1; i < len(lastPath)-1; i++ {
+		room := Rooms[lastPath[i]]
+		room.beforeInPath = lastPath[i-1]
+		Rooms[lastPath[i]] = room
+	}
+}
+
+// Removes a link from a vertex
 func removeLink(links []string, conflictRoom string) []string {
 	for i := 0; i < len(links); i++ {
 		if links[i] == conflictRoom {
@@ -168,28 +98,131 @@ func removeLink(links []string, conflictRoom string) []string {
 	return links
 }
 
-func resetIsChecked(pathRooms [][]string) {
-	allPathRooms := []string{}
-	for i := range pathRooms {
-		for j := range pathRooms[i] {
-			allPathRooms = append(allPathRooms, pathRooms[i][j])
-		}
-	}
+func bfs() (bool, string, string) {
+	fmt.Println(Rooms)
 
-	for index := range Rooms {
-		for i := range allPathRooms {
-			if index == allPathRooms[i] {
-				break
-			}
-			if i == len(allPathRooms)-1 {
-				room := Rooms[index]
+
+	startRoom := Rooms[start]
+	startRoom.isChecked = true
+	Rooms[start] = startRoom
+
+	alreadyInRevesedPath := false
+
+
+	reversedNodesByPath := make(map[*[]string][]string)  // reversedNodesByPath[*path] = []string{firstEncoutredAsReversed, toRemoveLink}
+
+	firstEncoutredAsReversed, toRemoveLink := "", ""
+
+	paths := [][]string{{start}}
+	for len(paths) != 0 {
+		if len(Rooms[start].links) == 0 {
+			return false, "", ""
+		}
+		
+		for i:= 0; i < len(paths); i++ {
+			fmt.Println(paths)
+			validLinks := 0
+
+
+			lastInPath := paths[i][len(paths[i])-1]
+
+			if Rooms[lastInPath].beforeInPath != "" && !alreadyInRevesedPath {
+				beforeInPath := Rooms[lastInPath].beforeInPath
+				path := paths[i]
+				reversedNodesByPath[&path] = []string{beforeInPath, lastInPath}
+				validLinks++
+
+				room := Rooms[lastInPath]
 				room.isChecked = false
-				Rooms[index] = room
+				Rooms[lastInPath] = room
+				
+				paths[i] = append(paths[i], beforeInPath)
+
+				alreadyInRevesedPath = true
+				fmt.Println(Rooms)
+
+				continue
+			}
+
+			for j, link := range Rooms[lastInPath].links {
+
+				if link == end {
+
+					if validLinks == 0 {
+						paths[i] = append(paths[i], link)
+					} else {
+						paths = append(paths, append(paths[i][:len(paths[i])-1], link))
+					}
+				
+
+
+					if len(reversedNodesByPath[&paths[i]]) == 2 {
+						firstEncoutredAsReversed = reversedNodesByPath[&paths[i]][0]
+						toRemoveLink = reversedNodesByPath[&paths[i]][1]
+					}
+
+					validPaths = append(validPaths, paths[i])
+					paths = [][]string{{start}}
+					resetIsChecked()
+					fmt.Println("Valid paths :", validPaths)
+					return true, firstEncoutredAsReversed, toRemoveLink
+				}
+
+				if !Rooms[link].isChecked {
+					// fmt.Println(lastInPath, link)
+					room := Rooms[link]
+					validLinks++
+					room.isChecked = true
+					Rooms[link] = room
+					if validLinks == 1 {
+						paths[i] = append(paths[i], link)
+					} else {
+						var path = make([]string, len(paths[i]))
+						copy(path, paths[i])
+						paths = append(paths, append(path[:len(path)-1], link))
+					}
+
+				} else if j == len(Rooms[lastInPath].links)-1 && validLinks == 0 {
+					if i + 1 < len(paths) {
+						paths = append(paths[:i], paths[i+1:]...)
+					} else {
+						paths = paths[:i]			
+					}
+
+				}
 			}
 		}
 	}
+	return false, "", ""
 }
 
+func resetIsChecked() {
+	// allPathRooms := []string{}
+	// for i := range pathRooms {
+	// 	for j := range pathRooms[i] {
+	// 		allPathRooms = append(allPathRooms, pathRooms[i][j])
+	// 	}
+	// }
+
+	for index := range Rooms {
+		room := Rooms[index]
+		room.isChecked = false
+		Rooms[index] = room
+	}
+
+	// for index := range Rooms {
+	// 	for i := range allPathRooms {
+	// 		// if index == allPathRooms[i] {
+	// 		// 	break
+	// 		// }
+	// 		if i == len(allPathRooms)-1 {
+	// 			room := Rooms[index]
+	// 			room.isChecked = false
+	// 			Rooms[index] = room
+	// 		}
+	// 	}
+	// }
+}
 func ParsingData(str string) any {
 	var err error
 	split := strings.Split(str, "\n")

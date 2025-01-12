@@ -23,85 +23,95 @@ var (
 )
 
 func main() {
-	dataBytes, _ := os.ReadFile("data2.txt")
-
-	// Normal BFS
+	dataBytes, _ := os.ReadFile(os.Args[1])
 	ParsingData(string(dataBytes))
 	fmt.Println(Rooms, len(Rooms))
+
 	
-	hasFoundPath, _, _ := bfs()
-	if !hasFoundPath {
-		fmt.Println("Bfs didn't find any paths")
-		return
-	}
-	saveBeforeInPath()
-	removePathLinks()
-	fmt.Println(Rooms, len(Rooms))
 
-
-	hasFoundPath, revNode, toRemove := bfs()
-	if !hasFoundPath {
-		fmt.Println("Bfs didn't find any paths")
-		return
-	}
-	saveBeforeInPath()
-	removePathLinks()
 	
-	validPaths = [][]string{}
-	Rooms = make(map[string]Room)
 
+	linksToRemove := make(map[string]string)
 
-	// Normal BFS
-	ParsingData(string(dataBytes))
+	for {
+		// time.Sleep(time.Second)
 
-	if revNode != "" && toRemove != "" {
-		room := Rooms[revNode]
-		room.links = removeLink(room.links, toRemove)
-		Rooms[revNode] = room
+		hasFoundAny, _, _ := bfs()
+
+		if !hasFoundAny {
+			fmt.Println("Bfs didn't find any paths")
+			break
+		}
+		saveBeforeInPath()
+		
+
+		isBackTracking, revNode, toRemove := checkIfBackTrackingPath()
+		if isBackTracking {
+		
+		
+			linksToRemove[revNode] = toRemove
 
 		
-		room2 := Rooms[toRemove]
-		room2.links = removeLink(room2.links, revNode)
-		Rooms[toRemove] = room2
-	}
+			fmt.Println(revNode, toRemove, "revnode---------------------------")
+			validPaths = [][]string{}
+			Rooms = make(map[string]Room)
 	
-	fmt.Println(Rooms, len(Rooms))
-	
-	hasFoundPath, _, _ = bfs()
-	if !hasFoundPath {
-		fmt.Println("Bfs didn't find any paths")
-		return
+			ParsingData(string(dataBytes))
+
+			for rev, toRm := range linksToRemove {
+				room := Rooms[rev]
+				room.links = removeLink(room.links, toRm)
+				Rooms[rev] = room
+		
+				
+				room2 := Rooms[toRm]
+				room2.links = removeLink(room2.links, rev)
+				Rooms[toRm] = room2
+			}
+		}
+		removePathsLinks()
 	}
-	saveBeforeInPath()
-	removePathLinks()
-	fmt.Println(Rooms, len(Rooms))
 
-
-	hasFoundPath, revNode, toRemove = bfs()
-	if !hasFoundPath {
-		fmt.Println("Bfs didn't find any paths")
-		return
-	}
-	saveBeforeInPath()
-	removePathLinks()
-	
-
-
-	// hasFoundPath = bfs()
-	// if !hasFoundPath {
-	// 	fmt.Println("Bfs didn't find any paths")
-	// 	return
-	// }
-	// saveBeforeInPath()
-	// removePathLinks()
+	fmt.Println("finnal paths :", validPaths)
 }
 
-func removePathLinks() {
+func checkIfBackTrackingPath() (bool, string, string) {
 	lastPath := validPaths[len(validPaths)-1]
-	for i := 0; i < len(lastPath)-1; i++ {
-		node := Rooms[lastPath[i]]
-		node.links = removeLink(node.links, lastPath[i+1])
-		Rooms[lastPath[i]] = node
+	pathRooms := validPaths[:len(validPaths)-1]
+	links := make(map[string]string)
+
+	// get all path links reversed
+	for i := len(pathRooms)-1; i >= 0; i-- {
+		fmt.Println("okk")
+
+		fmt.Println(pathRooms)
+
+		for j := len(pathRooms[i])-2; j >= 1; j-- {
+			fmt.Println("ok")
+			links[pathRooms[i][j]] = pathRooms[i][j-1]
+		}
+	}
+	fmt.Println("------------------------------------")
+	fmt.Println(links)
+	fmt.Println("------------------------------------")
+	for i := 1; i < len(lastPath)-1; i++ {
+		if links[lastPath[i]] == lastPath[i+1] {
+			return true, lastPath[i], lastPath[i+1]
+		}
+	}
+
+	return false, "", ""
+}
+
+func removePathsLinks() {
+	for index := 0; index < len(validPaths); index++ {
+		path := validPaths[index]
+		fmt.Println(path)
+		for i := 0; i < len(path)-1; i++ {
+			node := Rooms[path[i]]
+			node.links = removeLink(node.links, path[i+1])
+			Rooms[path[i]] = node
+		}
 	}
 }
 
@@ -129,40 +139,46 @@ func removeLink(links []string, conflictRoom string) []string {
 }
 
 func bfs() (bool, string, string) {
+	fmt.Println(Rooms)
+
 
 	startRoom := Rooms[start]
 	startRoom.isChecked = true
 	Rooms[start] = startRoom
 
 	alreadyInRevesedPath := false
+	
 	firstEncoutredAsReversed := ""
 	toRemoveLink := ""
 
+
 	paths := [][]string{{start}}
 	for len(paths) != 0 {
+		if len(Rooms[start].links) == 0 {
+			return false, "", ""
+		}
+		
 		for i:= 0; i < len(paths); i++ {
+			fmt.Println(paths)
 			validLinks := 0
 
 
 			lastInPath := paths[i][len(paths[i])-1]
-			fmt.Println(paths)
 
 			if Rooms[lastInPath].beforeInPath != "" && !alreadyInRevesedPath {
 				beforeInPath := Rooms[lastInPath].beforeInPath
-				fmt.Println(beforeInPath)
 				firstEncoutredAsReversed = beforeInPath
 				toRemoveLink = lastInPath
 				validLinks++
 
-				room := Rooms[beforeInPath]
-				room.isChecked = true
-				Rooms[beforeInPath] = room
-				fmt.Println(paths[i], beforeInPath)
+				room := Rooms[lastInPath]
+				room.isChecked = false
+				Rooms[lastInPath] = room
 				
 				paths[i] = append(paths[i], beforeInPath)
-				fmt.Println(paths[i], beforeInPath)
 
 				alreadyInRevesedPath = true
+				fmt.Println(Rooms)
 
 				continue
 			}
@@ -170,7 +186,12 @@ func bfs() (bool, string, string) {
 			for j, link := range Rooms[lastInPath].links {
 
 				if link == end {
-					paths[i] = append(paths[i], link)
+
+					if validLinks == 0 {
+						paths[i] = append(paths[i], link)
+					} else {
+						paths = append(paths, append(paths[i][:len(paths[i])-1], link))
+					}
 					validPaths = append(validPaths, paths[i])
 					paths = [][]string{{start}}
 					resetIsChecked(validPaths)
@@ -203,29 +224,35 @@ func bfs() (bool, string, string) {
 			}
 		}
 	}
-	return false, "", ""
+	return false, firstEncoutredAsReversed, toRemoveLink
 }
 
 func resetIsChecked(pathRooms [][]string) {
-	allPathRooms := []string{}
-	for i := range pathRooms {
-		for j := range pathRooms[i] {
-			allPathRooms = append(allPathRooms, pathRooms[i][j])
-		}
-	}
+	// allPathRooms := []string{}
+	// for i := range pathRooms {
+	// 	for j := range pathRooms[i] {
+	// 		allPathRooms = append(allPathRooms, pathRooms[i][j])
+	// 	}
+	// }
 
 	for index := range Rooms {
-		for i := range allPathRooms {
-			// if index == allPathRooms[i] {
-			// 	break
-			// }
-			if i == len(allPathRooms)-1 {
-				room := Rooms[index]
-				room.isChecked = false
-				Rooms[index] = room
-			}
-		}
+		room := Rooms[index]
+		room.isChecked = false
+		Rooms[index] = room
 	}
+
+	// for index := range Rooms {
+	// 	for i := range allPathRooms {
+	// 		// if index == allPathRooms[i] {
+	// 		// 	break
+	// 		// }
+	// 		if i == len(allPathRooms)-1 {
+	// 			room := Rooms[index]
+	// 			room.isChecked = false
+	// 			Rooms[index] = room
+	// 		}
+	// 	}
+	// }
 }
 func ParsingData(str string) any {
 	var err error
