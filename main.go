@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
-)
+)	
 
 type Room struct {
 	links []string
@@ -15,85 +15,128 @@ type Room struct {
 }
 
 var (
-	antsNumber = 0
+	antsNumber int
+	data string
 	Rooms = make(map[string]Room)
-	start = ""
-	end = ""
-	validPaths = [][]string{}
+	start string
+	end string
+	validPaths [][]string
 )
 
 func main() {
 	dataBytes, _ := os.ReadFile(os.Args[1])
-	ParsingData(string(dataBytes))
-	fmt.Println(Rooms, len(Rooms))
+	data = string(dataBytes)
+	ParsingData(data)
 
+	FindValidPaths()
+	fmt.Println("len final paths :", len(validPaths))
+
+	// Sorting strings by length
+	sort.Slice(validPaths, func(i, j int) bool {
+		return len(validPaths[i]) < len(validPaths[j])
+	})
+
+	orderAnts()
+}
+
+func orderAnts() {
+
+
+	// Order Ants
+	ants := make([]int, len(validPaths))
+	indexShortestPath := 0
+	shortestPathLen := 0
+
+	for antsNumber > 0 {
+		shortestPathLen = len(validPaths[indexShortestPath])+ants[indexShortestPath] // Should set to make int64 value because it is max value that can be reeturned by len()
+
+
+		if len(validPaths) > 1 && len(validPaths[indexShortestPath+1]) + ants[indexShortestPath+1] < shortestPathLen {
+			shortestPathLen = len(validPaths[indexShortestPath+1]) + ants[indexShortestPath+1]
+			indexShortestPath++
+		}
+
+		ants[indexShortestPath]++
+		antsNumber--
+
+		if indexShortestPath == len(validPaths)-1 {
+			indexShortestPath = 0
+		}
+	}
+
+
+
+
+	fmt.Println("OrdredAnts", ants, " - turns :", shortestPathLen-1, validPaths)
+}
+
+func FindValidPaths() {
 	
 
-	
-
-	linksToRemove := make(map[string]string)
+	linksToRemove := make(map[string][]string)
 
 	for {
 		// time.Sleep(time.Second)
 
-		hasFoundAny, _, _ := bfs()
-
+		hasFoundAny := bfs()
+		
 		if !hasFoundAny {
-			fmt.Println("Bfs didn't find any paths")
 			break
 		}
 		saveBeforeInPath()
 		
 
 		isBackTracking, revNode, toRemove := checkIfBackTrackingPath()
+
 		if isBackTracking {
 		
-		
-			linksToRemove[revNode] = toRemove
+			linksToRemove[revNode] = append(linksToRemove[revNode], toRemove)
 
 		
-			fmt.Println(revNode, toRemove, "revnode---------------------------")
 			validPaths = [][]string{}
+
 			Rooms = make(map[string]Room)
 	
-			ParsingData(string(dataBytes))
+			ParsingData(data)
 
-			for rev, toRm := range linksToRemove {
-				room := Rooms[rev]
-				room.links = removeLink(room.links, toRm)
-				Rooms[rev] = room
-		
-				
-				room2 := Rooms[toRm]
-				room2.links = removeLink(room2.links, rev)
-				Rooms[toRm] = room2
+
+			for rev, links := range linksToRemove {
+				for _, toRm := range links {
+					room := Rooms[rev]
+					room.links = removeLink(room.links, toRm)
+					Rooms[rev] = room
+			
+					
+					room2 := Rooms[toRm]
+					room2.links = removeLink(room2.links, rev)
+					Rooms[toRm] = room2
+				}
 			}
+		} else if antsNumber == len(validPaths) {
+			return
+		} else {
+			removePathsLinks()
 		}
-		removePathsLinks()
 	}
 
-	fmt.Println("finnal paths :", validPaths)
+	if len(validPaths) == 0 {
+		fmt.Println("ERROR: invalid data format")
+		os.Exit(0)
+	}
 }
 
 func checkIfBackTrackingPath() (bool, string, string) {
 	lastPath := validPaths[len(validPaths)-1]
 	pathRooms := validPaths[:len(validPaths)-1]
 	links := make(map[string]string)
-
 	// get all path links reversed
 	for i := len(pathRooms)-1; i >= 0; i-- {
-		fmt.Println("okk")
-
-		fmt.Println(pathRooms)
 
 		for j := len(pathRooms[i])-2; j >= 1; j-- {
-			fmt.Println("ok")
 			links[pathRooms[i][j]] = pathRooms[i][j-1]
 		}
 	}
-	fmt.Println("------------------------------------")
-	fmt.Println(links)
-	fmt.Println("------------------------------------")
+
 	for i := 1; i < len(lastPath)-1; i++ {
 		if links[lastPath[i]] == lastPath[i+1] {
 			return true, lastPath[i], lastPath[i+1]
@@ -106,7 +149,6 @@ func checkIfBackTrackingPath() (bool, string, string) {
 func removePathsLinks() {
 	for index := 0; index < len(validPaths); index++ {
 		path := validPaths[index]
-		fmt.Println(path)
 		for i := 0; i < len(path)-1; i++ {
 			node := Rooms[path[i]]
 			node.links = removeLink(node.links, path[i+1])
@@ -117,7 +159,7 @@ func removePathsLinks() {
 
 func saveBeforeInPath() {
 	lastPath := validPaths[len(validPaths)-1]
-	for i := 1; i < len(lastPath)-1; i++ {
+	for i := 1; i < len(lastPath)-1; i++ { // see if the link to the end should be removed
 		room := Rooms[lastPath[i]]
 		room.beforeInPath = lastPath[i-1]
 		Rooms[lastPath[i]] = room
@@ -138,8 +180,7 @@ func removeLink(links []string, conflictRoom string) []string {
 	return links
 }
 
-func bfs() (bool, string, string) {
-	fmt.Println(Rooms)
+func bfs() (bool) {
 
 
 	startRoom := Rooms[start]
@@ -147,19 +188,15 @@ func bfs() (bool, string, string) {
 	Rooms[start] = startRoom
 
 	alreadyInRevesedPath := false
-	
-	firstEncoutredAsReversed := ""
-	toRemoveLink := ""
 
 
 	paths := [][]string{{start}}
 	for len(paths) != 0 {
 		if len(Rooms[start].links) == 0 {
-			return false, "", ""
+			return false
 		}
 		
 		for i:= 0; i < len(paths); i++ {
-			fmt.Println(paths)
 			validLinks := 0
 
 
@@ -167,8 +204,6 @@ func bfs() (bool, string, string) {
 
 			if Rooms[lastInPath].beforeInPath != "" && !alreadyInRevesedPath {
 				beforeInPath := Rooms[lastInPath].beforeInPath
-				firstEncoutredAsReversed = beforeInPath
-				toRemoveLink = lastInPath
 				validLinks++
 
 				room := Rooms[lastInPath]
@@ -178,7 +213,6 @@ func bfs() (bool, string, string) {
 				paths[i] = append(paths[i], beforeInPath)
 
 				alreadyInRevesedPath = true
-				fmt.Println(Rooms)
 
 				continue
 			}
@@ -193,14 +227,11 @@ func bfs() (bool, string, string) {
 						paths = append(paths, append(paths[i][:len(paths[i])-1], link))
 					}
 					validPaths = append(validPaths, paths[i])
-					paths = [][]string{{start}}
 					resetIsChecked()
-					fmt.Println("Valid paths :", validPaths)
-					return true, firstEncoutredAsReversed, toRemoveLink
+					return true
 				}
 
 				if !Rooms[link].isChecked {
-					// fmt.Println(lastInPath, link)
 					room := Rooms[link]
 					validLinks++
 					room.isChecked = true
@@ -224,41 +255,23 @@ func bfs() (bool, string, string) {
 			}
 		}
 	}
-	return false, firstEncoutredAsReversed, toRemoveLink
+	return false
 }
 
 func resetIsChecked() {
-	// allPathRooms := []string{}
-	// for i := range pathRooms {
-	// 	for j := range pathRooms[i] {
-	// 		allPathRooms = append(allPathRooms, pathRooms[i][j])
-	// 	}
-	// }
 
 	for index := range Rooms {
 		room := Rooms[index]
 		room.isChecked = false
 		Rooms[index] = room
 	}
-
-	// for index := range Rooms {
-	// 	for i := range allPathRooms {
-	// 		// if index == allPathRooms[i] {
-	// 		// 	break
-	// 		// }
-	// 		if i == len(allPathRooms)-1 {
-	// 			room := Rooms[index]
-	// 			room.isChecked = false
-	// 			Rooms[index] = room
-	// 		}
-	// 	}
-	// }
 }
 func ParsingData(str string) any {
 	var err error
 	split := strings.Split(str, "\n")
-	if antsNumber, err = strconv.Atoi(split[0]); err != nil {
-		log.Fatal(err)
+	if antsNumber, err = strconv.Atoi(split[0]); err != nil  {
+		fmt.Println("ERROR: invalid data format")
+		os.Exit(0)
 	}
 	for i:= 1; i < len(split); i++ {
 		if len(strings.Split(split[i], " ")) == 3 {
@@ -273,11 +286,13 @@ func ParsingData(str string) any {
 			continue
 		} else if len(strings.Split(split[i], "-")) == 2 {
 			fillRoomData(split[i])
+		} else if split[i] == "" {
+			continue
 		} else {
-			log.Fatal("Errorrr")
+			fmt.Println("ERROR: invalid data format, at line "+strconv.Itoa(i+1))
+			os.Exit(0)
 		}
 	}
-	fmt.Println(start, end)
 	return nil
 }
 
