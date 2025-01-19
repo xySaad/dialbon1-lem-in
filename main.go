@@ -21,6 +21,7 @@ var (
 	start string
 	end string
 	validPaths [][]string
+	allValidPaths [][][]string
 )
 
 func main() {
@@ -29,6 +30,7 @@ func main() {
 	ParsingData(data)
 
 	FindValidPaths()
+	allValidPaths = append(allValidPaths, validPaths)
 	fmt.Println("len final paths :", len(validPaths))
 
 	// Sorting strings by length
@@ -36,28 +38,41 @@ func main() {
 		return len(validPaths[i]) < len(validPaths[j])
 	})
 
-	orderAnts()
+	shortestPathIndex := 0
+	lessTurns, antsOrdred := orderAnts(0)
+
+	for i := 1; i < len(allValidPaths); i++ {
+		turns, ants := orderAnts(i)
+		if turns < lessTurns {
+			antsOrdred = ants
+			lessTurns = turns
+			shortestPathIndex = i
+		}
+	}
+	fmt.Println(allValidPaths)
+	fmt.Println("Final : OrdredAnts", antsOrdred, " - turns :", lessTurns, allValidPaths[shortestPathIndex])
 }
 
-func orderAnts() {
+func orderAnts(indexValidPaths int) (int, []int) {
 
-
+	foundPath := allValidPaths[indexValidPaths]
+	antsN := antsNumber
 	// Order Ants
-	ants := make([]int, len(validPaths))
+	ants := make([]int, len(foundPath))
 	indexShortestPath := 0
 	shortestPathLen := 0
 
-	for antsNumber > 0 {
-		shortestPathLen = len(validPaths[indexShortestPath])+ants[indexShortestPath] // Should set to make int64 value because it is max value that can be reeturned by len()
+	for antsN > 0 {
+		shortestPathLen = len(foundPath[indexShortestPath])+ants[indexShortestPath] // Should set to make int64 value because it is max value that can be reeturned by len()
 
 
-		if len(validPaths) > 1 && len(validPaths[indexShortestPath+1]) + ants[indexShortestPath+1] < shortestPathLen {
-			shortestPathLen = len(validPaths[indexShortestPath+1]) + ants[indexShortestPath+1]
+		if len(foundPath) > 1 && len(foundPath[indexShortestPath+1]) + ants[indexShortestPath+1] < shortestPathLen {
+			shortestPathLen = len(foundPath[indexShortestPath+1]) + ants[indexShortestPath+1]
 			indexShortestPath++
 		}
 
 		ants[indexShortestPath]++
-		antsNumber--
+		antsN--
 
 		if indexShortestPath == len(validPaths)-1 {
 			indexShortestPath = 0
@@ -68,6 +83,7 @@ func orderAnts() {
 
 
 	fmt.Println("OrdredAnts", ants, " - turns :", shortestPathLen-1, validPaths)
+	return shortestPathLen-1, ants
 }
 
 func FindValidPaths() {
@@ -91,7 +107,7 @@ func FindValidPaths() {
 		if isBackTracking {
 		
 			linksToRemove[revNode] = append(linksToRemove[revNode], toRemove)
-
+			allValidPaths = append(allValidPaths, validPaths[:len(validPaths)-1])
 		
 			validPaths = [][]string{}
 
