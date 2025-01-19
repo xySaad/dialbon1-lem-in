@@ -38,6 +38,7 @@ func main() {
 		return len(validPaths[i]) < len(validPaths[j])
 	})
 
+	fmt.Println(allValidPaths)
 	shortestPathIndex := 0
 	lessTurns, antsOrdred := orderAnts(0)
 
@@ -49,7 +50,7 @@ func main() {
 			shortestPathIndex = i
 		}
 	}
-	fmt.Println(allValidPaths)
+	// fmt.Println(allValidPaths)
 	fmt.Println("Final : OrdredAnts", antsOrdred, " - turns :", lessTurns, allValidPaths[shortestPathIndex])
 }
 
@@ -66,7 +67,7 @@ func orderAnts(indexValidPaths int) (int, []int) {
 		shortestPathLen = len(foundPath[indexShortestPath])+ants[indexShortestPath] // Should set to make int64 value because it is max value that can be reeturned by len()
 
 
-		if len(foundPath) > 1 && len(foundPath[indexShortestPath+1]) + ants[indexShortestPath+1] < shortestPathLen {
+		if len(foundPath) > 1 && indexShortestPath+1 < len(foundPath) && len(foundPath[indexShortestPath+1]) + ants[indexShortestPath+1] < shortestPathLen {
 			shortestPathLen = len(foundPath[indexShortestPath+1]) + ants[indexShortestPath+1]
 			indexShortestPath++
 		}
@@ -82,7 +83,7 @@ func orderAnts(indexValidPaths int) (int, []int) {
 
 
 
-	fmt.Println("OrdredAnts", ants, " - turns :", shortestPathLen-1, validPaths)
+	fmt.Println("OrdredAnts", ants, " - turns :", shortestPathLen-1, foundPath)
 	return shortestPathLen-1, ants
 }
 
